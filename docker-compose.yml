@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # 1. خدمة قاعدة البيانات MongoDB
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb_db
+    restart: always
+    ports:
+      - "27017:27017" # ربط المنفذ
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db # تخزين البيانات بشكل مستمر
+
+  # 2. خدمة الخلفية Node.js/Express
+  backend:
+    build:
+      context: ./backend # بناء من مجلد backend
+      dockerfile: Dockerfile
+    container_name: backend_app
+    restart: always
+    ports:
+      - "5000:5000" # تشغيل على منفذ 5000
+    depends_on:
+      - mongodb # التأكد من تشغيل قاعدة البيانات أولاً
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      # رابط الاتصال بقاعدة البيانات (اسم الخدمة هو hostname)
+      MONGO_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/attendanceDB?authSource=admin
+    volumes:
+      - ./backend:/app # ربط مجلد الكود
+      - /app/node_modules # استثناء مجلد node_modules من الربط
+    command: npm run dev # الأمر الذي يبدأ التشغيل (يجب تعريفه في package.json)
+
+# تخزين البيانات
+volumes:
+  mongo_data:
